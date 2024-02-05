@@ -18,7 +18,12 @@ so that plugins have access to the dev tools. Toss it in the bin directory of nv
 
 `%*` passes through any arguments given to the command
 ```shell
-"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 && nvim %*
+setlocal
+if not defined DevEnvDir (
+    call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64
+)
+nvim %*
+endlocal
 ```
 
 # Tutorials
