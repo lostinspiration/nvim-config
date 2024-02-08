@@ -8,6 +8,14 @@ vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
+-- move lines
+vim.keymap.set('n', '<A-j>', ':m .+1<CR>==')
+vim.keymap.set('n', '<A-k>', ':m .-2<CR>==')
+vim.keymap.set('i', '<A-j>', '<Esc>:m .+1<CR>==gi')
+vim.keymap.set('i', '<A-k>', '<Esc>:m .-2<CR>==gi')
+vim.keymap.set('v', '<A-j>', ':m \'>+1<CR>gv=gv')
+vim.keymap.set('v', '<A-k>', ':m \'<-2<CR>gv=gv')
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic message' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic message' })
