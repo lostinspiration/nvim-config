@@ -48,4 +48,29 @@ vim.o.expandtab = true
 
 vim.g.rust_recommended_style = false
 
+-- folding
+local ident = 0
+function MakeFolds()
+  local tmp = ident
+  local line = vim.fn.getline(vim.v.lnum)
+  if line:match('{') and line:match('}') then
+    return tmp
+  end
+  if line:match('{') then
+    ident = ident + 1
+    tmp = ident
+  end
+  if line:match('}') then
+    tmp = ident
+    ident = ident - 1
+  end
+
+  return tmp
+end
+
+vim.opt.foldlevelstart = 99
+vim.opt.foldmethod = 'expr'
+vim.opt.foldcolumn = '1'
+vim.opt.foldexpr = 'v:lua.MakeFolds()'
+
 -- vim: ts=2 sts=2 sw=2 et
