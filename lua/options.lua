@@ -68,9 +68,17 @@ function MakeFolds()
   return tmp
 end
 
+function FoldText()
+  local fs = vim.v.foldstart
+  local line = vim.fn.getline(fs)
+  local spaces = string.rep(' ', vim.o.tabstop)
+  return vim.fn.substitute(line, '\t', spaces, 'g')
+end
+
 vim.opt.foldlevelstart = 99
 vim.opt.foldmethod = 'expr'
 vim.opt.foldcolumn = '1'
 vim.opt.foldexpr = 'v:lua.MakeFolds()'
+vim.opt.foldtext = 'v:lua.FoldText()'
 
 -- vim: ts=2 sts=2 sw=2 et
