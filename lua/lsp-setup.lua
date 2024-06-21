@@ -73,7 +73,14 @@ local servers = {
   pyright = {},
   rust_analyzer = {},
   html = { filetypes = { 'html', 'twig', 'hbs' } },
-
+  omnisharp = {
+    FormattingOptions = {
+      EnableEditorConfigSupport = true,
+    },
+    RoslynExtensionsOptions = {
+      EnableAnalyzersSupport = true,
+    },
+  },
   lua_ls = {
     Lua = {
       workspace = { checkThirdParty = false },
