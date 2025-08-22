@@ -39,6 +39,13 @@ Clone this repo to your user directory or wherever you store your source files a
 ln -s ~\.config\nvim ~\nvim-config
 ```
 
+## Update
+```shell
+curl -LO https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz
+sudo rm -rf /opt/nvim-linux-x86_64
+sudo tar -xzf nvim-linux-x86_64.tar.gz
+```
+
 # Tutorials
 - Video Tutorials
   - [Vim as your editor - ThePrimeagen](https://www.youtube.com/watch?v=X6AR2RMB5tE)
