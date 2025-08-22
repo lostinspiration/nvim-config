@@ -1,6 +1,7 @@
 Neovim setup for both windows and linux. My primary focus is to have an environment that I can use both at work in Windows and at home in Linux.
 
-Note: This requires version 0.12+ of neovim
+> [!IMPORTANT]
+> This requires version 0.12+ of neovim
 
 # Windows
 ## Requirements
