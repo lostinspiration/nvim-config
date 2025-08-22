@@ -1,12 +1,14 @@
-This is my setup for neovim on windows using windows terminal (no wsl). My primary focus is to have a personalized
-development environment for HTML, javascript, rust, c#, and powershell.
+Neovim setup for both windows and linux. My primary focus is to have an environment that I can use both at work in Windows and at home in Linux.
 
-# Requirements
+Note: This requires version 0.12+ of neovim
+
+# Windows
+## Requirements
 - git
 - nodejs
 - vs build tools 
 
-# Setup
+## Setup
 Clone this repo to the root of the c drive and symlink it to nvim's expected config location. This makes it easier to maintain
 rather than having to go into your user folder all the time.
 ```shell
@@ -24,6 +26,17 @@ if not defined DevEnvDir (
 )
 nvim %*
 endlocal
+```
+
+# Linux
+## Requirements
+- git
+- nodejs
+
+## Setup
+Clone this repo to your user directory or wherever you store your source files and symlink it to nvim's expected config location. This makes it easier to maintain rather than having to go into your user folder all the time.
+```shell
+ln -s ~\.config\nvim ~\nvim-config
 ```
 
 # Tutorials
