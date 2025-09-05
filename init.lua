@@ -143,14 +143,9 @@ vim.pack.add({
   {
     src = 'https://github.com/mason-org/mason.nvim',
     version = 'v2.0.1',
-  },
-  {
-    src = 'https://github.com/mason-org/mason-lspconfig.nvim',
-    version = 'v2.1.0',
     data = {
       config = function()
         require('mason').setup()
-        require('mason-lspconfig').setup()
       end
     },
   },
@@ -163,7 +158,7 @@ vim.pack.add({
         harpoon:setup()
 
         vim.keymap.set('n', '<leader>aa', function()
-          harpoon:list():append()
+          harpoon:list():add()
         end)
         vim.keymap.set('n', '<C-e>', function()
           harpoon.ui:toggle_quick_menu(harpoon:list())
@@ -346,11 +341,8 @@ local servers = {
       -- diagnostics = { disable = { 'missing-fields' } },
     },
   },
+  zls = {},
 }
-
-require('mason-lspconfig').setup({
-  ensure_installed = vim.tbl_keys(servers),
-})
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
