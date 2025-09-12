@@ -157,10 +157,10 @@ vim.pack.add({
         local harpoon = require('harpoon')
         harpoon:setup()
 
-        vim.keymap.set('n', '<leader>aa', function()
+        vim.keymap.set('n', '<leader>ha', function()
           harpoon:list():add()
         end)
-        vim.keymap.set('n', '<C-e>', function()
+        vim.keymap.set('n', '<leader>he', function()
           harpoon.ui:toggle_quick_menu(harpoon:list())
         end)
       end
@@ -326,14 +326,6 @@ local servers = {
   pyright = {},
   rust_analyzer = {},
   html = { filetypes = { 'html' } },
-  omnisharp = {
-    FormattingOptions = {
-      EnableEditorConfigSupport = true,
-    },
-    RoslynExtensionsOptions = {
-      EnableAnalyzersSupport = true,
-    },
-  },
   lua_ls = {
     Lua = {
       workspace = { checkThirdParty = false },
