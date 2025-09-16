@@ -86,7 +86,7 @@ vim.pack.add({
   },
   {
     src = 'https://github.com/nvim-telescope/telescope.nvim',
-    version = '0.1.8',
+    branch = 'master',
     data = {
       config = function()
         local telescope = require('telescope')
@@ -123,7 +123,11 @@ vim.pack.add({
             previewer = false,
           }))
         end, { desc = '[/] Fuzzily search in current buffer' })
+        vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = '[F]ind [F]iles' })
         vim.keymap.set('n', '<leader>gf', builtin.git_files, { desc = 'Search [G]it [F]iles' })
+        vim.keymap.set('n', '<leader>ts', function()
+          builtin.treesitter({ symbols = { 'function', 'method', 'type' } })
+        end, { desc = '[T]ree [S]itter' })
         vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
         vim.keymap.set('n', '<leader>fb', ':Telescope file_browser<CR>', { noremap = true })
         vim.keymap.set('n', '<leader>fc', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { noremap = true })
