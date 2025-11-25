@@ -326,6 +326,22 @@ local on_attach = function(_, bufnr)
   vim.api.nvim_buf_create_user_command(bufnr, 'Format', function()
     vim.lsp.buf.format()
   end, { desc = 'Format current buffer with LSP' })
+
+  vim.api.nvim_buf_create_user_command(bufnr, 'AutoCompleteOn', function()
+    require('cmp').setup({
+      completion = {
+        autocomplete = { require('cmp.types').cmp.TriggerEvent.TextChanged }
+      }
+    })
+  end, { desc = 'Auto Completion On' })
+
+  vim.api.nvim_buf_create_user_command(bufnr, 'AutoCompleteOff', function()
+    require('cmp').setup({
+      completion = {
+        autocomplete = false
+      }
+    })
+  end, { desc = 'Auto Completion Off' })
 end
 
 local servers = {
