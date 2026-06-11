@@ -60,15 +60,21 @@ vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = tr
 
 -- move lines
 vim.keymap.set('n', '<A-j>', ':m .+1<CR>==')
+vim.keymap.set('n', '<A-Down>', ':m .+1<CR>==')
 vim.keymap.set('n', '<A-k>', ':m .-2<CR>==')
+vim.keymap.set('n', '<A-Up>', ':m .-2<CR>==')
 vim.keymap.set('i', '<A-j>', '<Esc>:m .+1<CR>==gi')
+vim.keymap.set('i', '<A-Down>', '<Esc>:m .+1<CR>==gi')
 vim.keymap.set('i', '<A-k>', '<Esc>:m .-2<CR>==gi')
+vim.keymap.set('i', '<A-Up>', '<Esc>:m .-2<CR>==gi')
 vim.keymap.set('v', '<A-j>', ':m \'>+1<CR>==gv')
+vim.keymap.set('v', '<A-Down>', ':m \'>+1<CR>==gv')
 vim.keymap.set('v', '<A-k>', ':m \'<-2<CR>==gv')
+vim.keymap.set('v', '<A-Up>', ':m \'<-2<CR>==gv')
 
 -- diagnostic keymaps
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic message' })
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic message' })
+vim.keymap.set('n', '[d', function() vim.diagnostic.jump({count = -1, float = true}) end, { desc = 'Go to previous diagnostic message' })
+vim.keymap.set('n', ']d', function() vim.diagnostic.jump({count = 1, float = true}) end, { desc = 'Go to next diagnostic message' })
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Open floating diagnostic message' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic list' })
 
@@ -80,6 +86,47 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
   group = highlight_group,
   pattern = '*',
+})
+
+-- autocmd to support "build" properties on added packages
+local built = {}
+vim.api.nvim_create_autocmd("PackChanged", {
+  group = vim.api.nvim_create_augroup("VimPackHooks", { clear = true }),
+  callback = function(event)
+    local kind = event.data.kind
+    local spec = event.data.spec
+    local path = event.data.path
+    local build = spec.data and spec.data.build
+
+    if (kind ~= "install" and kind ~= "update") or not build then
+      return
+    end
+
+    -- skip if already built
+    local key = path .. "::" .. build
+    if built[key] then
+      return
+    end
+    built[key] = true
+
+    vim.notify(("Running build for %s: %s"):format(spec.name, build))
+
+    local obj = vim.system(
+      { vim.o.shell, vim.o.shellcmdflag, build },
+      { cwd = path, text = true }
+    ):wait()
+
+    if obj.code == 0 then
+      vim.notify(("Built %s"):format(spec.name), vim.log.levels.INFO)
+    else
+      vim.notify(
+        ("Build failed for %s (exit %d)\n%s"):format(spec.name, obj.code, obj.stderr or ""),
+        vim.log.levels.ERROR
+      )
+      -- allow retry on failure
+      built[key] = nil
+    end
+  end,
 })
 
 -- [[ packages ]]
@@ -297,13 +344,34 @@ vim.pack.add({
       end
     },
   },
+  {
+    src = 'https://github.com/Wansmer/symbol-usage.nvim',
+    data = {
+      config = function()
+        require('symbol-usage').setup()
+      end
+    },
+  },
+  {
+    src = 'https://github.com/zongben/dbout.nvim',
+    data = {
+      config = function()
+        require('dbout').setup()
+      end,
+      build = "npm install",
+    },
+  },
 })
 
 -- run config functions for each plugin
 -- if config order matters, make sure its sorted properly in the vim.pack.add list
 for _, v in pairs(vim.pack.get()) do
-  if v.spec.data and v.spec.data.config then
-    v.spec.data.config()
+  local config = v.spec.data and v.spec.data.config
+  if config then
+    local ok, err = pcall(config)
+    if not ok then
+      vim.notify(("Config failed for %s: %s"):format(v.spec.name, err), vim.log.levels.ERROR)
+    end
   end
 end
 
@@ -354,9 +422,17 @@ local servers = {
   html = { filetypes = { 'html' } },
   lua_ls = {
     Lua = {
-      workspace = { checkThirdParty = false },
+      workspace = {
+        checkThirdParty = false,
+        library = vim.api.nvim_get_runtime_file('', true),
+      },
       telemetry = { enable = false },
-      -- diagnostics = { disable = { 'missing-fields' } },
+      diagnostics = {
+        globals = {
+          'vim',
+          'require',
+        }
+      }
     },
   },
   zls = {},
