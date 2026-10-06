@@ -423,12 +423,26 @@ local specs = {
         }
 
         vim.keymap.set("n", "<F5>", dap.continue, { desc = "DAP continue/start" })
+        vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "DAP continue/start" })
         vim.keymap.set("n", "<F10>", dap.step_over, { desc = "DAP step over" })
+        vim.keymap.set("n", "<leader>dn", dap.step_over, { desc = "DAP step over (next)" })
         vim.keymap.set("n", "<F11>", dap.step_into, { desc = "DAP step into" })
+        vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "DAP step into" })
         vim.keymap.set("n", "<F12>", dap.step_out, { desc = "DAP step out" })
+        vim.keymap.set("n", "<leader>du", dap.step_out, { desc = "DAP step out (up)" })
         vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { desc = "Toggle breakpoint" })
         vim.keymap.set("n", "<leader>dr", dap.repl.toggle, { desc = "DAP REPL" })
         vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "DAP terminate" })
+      end
+    },
+  },
+  {
+    src = 'https://github.com/igorlfs/nvim-dap-view',
+    data = {
+      config = function()
+        require('dap-view').setup({
+          auto_toggle = true,
+        })
       end
     },
   },
