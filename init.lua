@@ -243,7 +243,14 @@ local specs = {
     data = {
       config = function()
         local onedark = require('onedark')
-        onedark.setup()
+        onedark.setup({
+          highlights = {
+            Comment = { fg = '#d4922f', fmt = 'none' },
+            ['@comment'] = { fg = '#d4922f', fmt = 'none' },
+            ['@comment.documentation'] = { fg = '#d4922f', fmt = 'none' },
+            ['@lsp.type.comment'] = { fg = '#d4922f', fmt = 'none' },
+          }
+        })
         onedark.load()
       end
     },
