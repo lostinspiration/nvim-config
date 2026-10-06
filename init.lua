@@ -144,7 +144,6 @@ vim.api.nvim_create_autocmd("PackChanged", {
 local specs = {
   {
     src = 'https://github.com/nvim-lua/plenary.nvim',
-    version = 'v0.1.4',
   },
   {
     src = 'https://github.com/nvim-telescope/telescope.nvim',
