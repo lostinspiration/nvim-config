@@ -44,6 +44,8 @@ vim.o.expandtab = true
 vim.opt.spell = true
 vim.opt.spelllang = "en_us"
 
+vim.o.winborder = 'rounded'
+
 vim.g.rust_recommended_style = false
 vim.g.zig_recommended_style = false
 
@@ -52,7 +54,7 @@ vim.g.zig_recommended_style = false
 vim.keymap.set({ 'n', 'v' }, '<space>', '<Nop>', { silent = true })
 
 -- dont touch unnamed register when pasting over visual selection
-vim.keymap.set('v', 'p', '"_dP', { silent = true, noremap = true })
+vim.keymap.set('v', 'P', '"_dP', { silent = true, noremap = true })
 
 -- remap for dealing with wordwrap
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
@@ -82,11 +84,14 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
 vim.api.nvim_create_autocmd('TextYankPost', {
   callback = function()
-    vim.highlight.on_yank()
+    vim.hl.on_yank()
   end,
   group = highlight_group,
   pattern = '*',
 })
+
+vim.cmd.packadd('nvim.undotree')
+vim.keymap.set('n', '<leader>u', '<Cmd>Undotree<CR>')
 
 -- autocmd to support "build" properties on added packages
 local built = {}
@@ -111,6 +116,12 @@ vim.api.nvim_create_autocmd("PackChanged", {
 
     vim.notify(("Running build for %s: %s"):format(spec.name, build))
 
+    if build:sub(1, 1) == ':' then
+      vim.cmd.packadd(spec.name) -- plugin isn't loaded yet during install
+      vim.cmd(build:sub(2))
+      return
+    end
+
     local obj = vim.system(
       { vim.o.shell, vim.o.shellcmdflag, build },
       { cwd = path, text = true }
@@ -130,15 +141,16 @@ vim.api.nvim_create_autocmd("PackChanged", {
 })
 
 -- [[ packages ]]
-vim.pack.add({
+local specs = {
   {
     src = 'https://github.com/nvim-lua/plenary.nvim',
     version = 'v0.1.4',
   },
   {
     src = 'https://github.com/nvim-telescope/telescope.nvim',
-    branch = 'master',
+    version = 'master',
     data = {
+      build = 'make',
       config = function()
         local telescope = require('telescope')
         local builtin = require('telescope.builtin')
@@ -201,7 +213,12 @@ vim.pack.add({
     version = 'v2.0.1',
     data = {
       config = function()
-        require('mason').setup()
+        require('mason').setup({
+          registries = {
+            'github:mason-org/mason-registry',
+            'github:Crashdummyy/mason-registry', -- provides `roslyn` (and `rzls`)
+          },
+        })
       end
     },
   },
@@ -233,10 +250,6 @@ vim.pack.add({
     },
   },
   {
-    src = 'https://github.com/mbbill/undotree',
-    version = 'rel_6.1',
-  },
-  {
     src = 'https://github.com/petertriho/nvim-scrollbar',
     data = {
       config = function()
@@ -246,29 +259,21 @@ vim.pack.add({
   },
   {
     src = 'https://github.com/nvim-treesitter/nvim-treesitter',
+    version = 'main',
     data = {
+      build = ':TSUpdate',
       config = function()
-        vim.defer_fn(function()
-          require('nvim-treesitter.configs').setup({
-            ensure_installed = {
-              'lua',
-              'python',
-              'rust',
-              'javascript',
-              'html',
-              'sql',
-              'zig',
-              'yaml',
-              'vimdoc',
-            },
-            auto_install = true,
-            sync_install = false,
-            ignore_install = {},
-            modules = {},
-            highlight = { enable = true },
-            indent = { enable = true },
-          })
-        end, 0)
+        require('nvim-treesitter').install({
+          'lua', 'python', 'rust', 'javascript', 'html', 'sql',
+          'zig', 'yaml', 'vimdoc', 'c_sharp',
+        })
+        vim.api.nvim_create_autocmd('FileType', {
+          callback = function(args)
+            if pcall(vim.treesitter.start, args.buf) then
+              vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+            end
+          end,
+        })
       end
     },
   },
@@ -276,7 +281,7 @@ vim.pack.add({
     src = 'https://github.com/j-hui/fidget.nvim',
     data = {
       config = function()
-        require('fidget').setup()
+        require('fidget').setup({})
       end
     },
   },
@@ -348,106 +353,148 @@ vim.pack.add({
     src = 'https://github.com/Wansmer/symbol-usage.nvim',
     data = {
       config = function()
-        require('symbol-usage').setup()
+        require('symbol-usage').setup({})
+      end
+    },
+  },
+  -- {
+  --   src = 'https://github.com/zongben/dbout.nvim',
+  --   data = {
+  --     config = function()
+  --       require('dbout').setup()
+  --     end,
+  --     build = "npm install",
+  --   },
+  -- },
+  {
+    src = 'https://github.com/seblyng/roslyn.nvim',
+    data = {
+      config = function()
+        require('roslyn').setup({
+          -- all optional
+          broad_search = false, -- search parent dirs for .sln when true
+          lock_target = false, -- keep the chosen sln/csproj across restarts
+          silent = false,
+        })
       end
     },
   },
   {
-    src = 'https://github.com/zongben/dbout.nvim',
+    src = 'https://github.com/mfussenegger/nvim-dap',
     data = {
       config = function()
-        require('dbout').setup()
-      end,
-      build = "npm install",
+        local dap = require("dap")
+
+        dap.adapters.coreclr = {
+          type = "executable",
+          -- mason.nvim normally puts its bin dir on PATH; if not, use the absolute path:
+          -- vim.fn.stdpath("data") .. "/mason/bin/netcoredbg"
+          command = "netcoredbg",
+          args = { "--interpreter=vscode" },
+        }
+
+        -- Find the built dll by asking for the project folder, then globbing bin/Debug
+        local function pick_dll()
+          local dir = vim.fn.input("Project dir: ", vim.fn.getcwd() .. "/", "dir")
+          local dlls = vim.fn.glob(dir .. "/bin/Debug/net*/*.dll", false, true)
+          -- prefer the dll named after the folder
+          local name = vim.fn.fnamemodify(dir:gsub("/$", ""), ":t")
+          for _, d in ipairs(dlls) do
+            if vim.fn.fnamemodify(d, ":t:r") == name then return d end
+          end
+          return vim.fn.input("Path to dll: ", dir .. "/bin/Debug/net*/", "file")
+        end
+
+        dap.configurations.cs = {
+          {
+            type = "coreclr",
+            name = "Launch (build first)",
+            request = "launch",
+            program = pick_dll,
+            cwd = function() return vim.fn.input("Working dir: ", vim.fn.getcwd() .. "/", "dir") end,
+            env = { ASPNETCORE_ENVIRONMENT = "Development" },
+          },
+        }
+
+        vim.keymap.set("n", "<F5>", dap.continue, { desc = "DAP continue/start" })
+        vim.keymap.set("n", "<F10>", dap.step_over, { desc = "DAP step over" })
+        vim.keymap.set("n", "<F11>", dap.step_into, { desc = "DAP step into" })
+        vim.keymap.set("n", "<F12>", dap.step_out, { desc = "DAP step out" })
+        vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { desc = "Toggle breakpoint" })
+        vim.keymap.set("n", "<leader>dr", dap.repl.toggle, { desc = "DAP REPL" })
+        vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "DAP terminate" })
+      end
     },
   },
-})
+}
 
 -- run config functions for each plugin
--- if config order matters, make sure its sorted properly in the vim.pack.add list
-for _, v in pairs(vim.pack.get()) do
-  local config = v.spec.data and v.spec.data.config
+-- if config order matters, make sure its sorted properly in the specslist
+vim.pack.add(specs)
+for _, v in pairs(specs) do
+  local config = v.data and v.data.config
   if config then
     local ok, err = pcall(config)
     if not ok then
-      vim.notify(("Config failed for %s: %s"):format(v.spec.name, err), vim.log.levels.ERROR)
+      vim.notify(("Config failed for %s: %s"):format(v.name, err), vim.log.levels.ERROR)
     end
   end
 end
 
 -- [[ configure lsp ]]
-local on_attach = function(_, bufnr)
-  local nmap = function(keys, func, desc)
-    if desc then
-      desc = 'LSP: ' .. desc
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('UserLspAttach', { clear = true }),
+  callback = function(args)
+    local bufnr = args.buf
+    local nmap = function(keys, fn, desc)
+      vim.keymap.set('n', keys, fn, { buffer = bufnr, desc = 'LSP: ' .. desc })
     end
+    nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+    nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
 
-    vim.keymap.set('n', keys, func, { buffer = bufnr, desc = desc })
-  end
+    nmap('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
+    nmap('gr', vim.lsp.buf.references, '[G]oto [R]eferences')
 
-  nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-  nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
+    nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
+    nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Help')
 
-  nmap('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
-  nmap('gr', vim.lsp.buf.references, '[G]oto [R]eferences')
+    vim.api.nvim_buf_create_user_command(bufnr, 'Format', function()
+      vim.lsp.buf.format()
+    end, { desc = 'Format current buffer with LSP' })
 
-  nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
-  nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Help')
-
-  -- create command `:Format` local to the lsp buffer
-  vim.api.nvim_buf_create_user_command(bufnr, 'Format', function()
-    vim.lsp.buf.format()
-  end, { desc = 'Format current buffer with LSP' })
-
-  vim.api.nvim_buf_create_user_command(bufnr, 'AutoCompleteOn', function()
-    require('cmp').setup({
-      completion = {
-        autocomplete = { require('cmp.types').cmp.TriggerEvent.TextChanged }
-      }
-    })
-  end, { desc = 'Auto Completion On' })
-
-  vim.api.nvim_buf_create_user_command(bufnr, 'AutoCompleteOff', function()
-    require('cmp').setup({
-      completion = {
-        autocomplete = false
-      }
-    })
-  end, { desc = 'Auto Completion Off' })
-end
-
-local servers = {
-  pyright = {},
-  rust_analyzer = {},
-  html = { filetypes = { 'html' } },
-  lua_ls = {
-    Lua = {
-      workspace = {
-        checkThirdParty = false,
-        library = vim.api.nvim_get_runtime_file('', true),
-      },
-      telemetry = { enable = false },
-      diagnostics = {
-        globals = {
-          'vim',
-          'require',
+    vim.api.nvim_buf_create_user_command(bufnr, 'AutoCompleteOn', function()
+      require('cmp').setup({
+        completion = {
+          autocomplete = { require('cmp.types').cmp.TriggerEvent.TextChanged }
         }
-      }
+      })
+    end, { desc = 'Auto Completion On' })
+
+    vim.api.nvim_buf_create_user_command(bufnr, 'AutoCompleteOff', function()
+      require('cmp').setup({
+        completion = {
+          autocomplete = false
+        }
+      })
+    end, { desc = 'Auto Completion Off' })
+  end,
+})
+
+vim.lsp.config('*', {
+  capabilities = require('cmp_nvim_lsp').default_capabilities(), -- drop if you go native completion
+})
+
+vim.lsp.config('html', { filetypes = { 'html' } })
+vim.lsp.config('lua_ls', {
+  settings = {
+    Lua = {
+      runtime = { version = 'LuaJIT' },
+      workspace = { checkThirdParty = false, library = { vim.env.VIMRUNTIME } },
+      telemetry = { enable = false },
     },
   },
-  zls = {},
-}
+})
 
-local capabilities = vim.lsp.protocol.make_client_capabilities()
-capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
-
-for k, _ in pairs(servers) do
-  require('lspconfig')[k].setup({
-    capabilities = capabilities,
-    on_attach = on_attach,
-    settings = servers[k],
-    filetypes = (servers[k] or {}).filetypes,
-  })
-end
+vim.lsp.enable({ 'pyright', 'rust_analyzer', 'html', 'lua_ls', 'zls' })
 
 -- vim: ts=2 sts=2 sw=2 et
