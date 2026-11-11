@@ -189,8 +189,41 @@ local specs = {
         vim.keymap.set('n', '<leader>gf', builtin.git_files, { desc = 'Search [G]it [F]iles' })
         vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
         vim.keymap.set('n', '<leader>ts', function()
-          builtin.treesitter({ symbols = { 'function', 'type' } })
-        end, { desc = '[T]ree [S]itter' })
+          local clients = vim.lsp.get_clients({ bufnr = 0, method = 'textDocument/documentSymbol' })
+          if #clients > 0 then
+            builtin.lsp_document_symbols({
+              -- Array = 18
+              -- Boolean = 17
+              -- Class = 5
+              -- Constant = 14
+              -- Constructor = 9
+              -- Enum = 10
+              -- EnumMember = 22
+              -- Event = 24
+              -- Field = 8
+              -- File = 1
+              -- Function = 12
+              -- Interface = 11
+              -- Key = 20
+              -- Method = 6
+              -- Module = 2
+              -- Namespace = 3
+              -- Null = 21
+              -- Number = 16
+              -- Object = 19
+              -- Operator = 25
+              -- Package = 4
+              -- Property = 7
+              -- String = 15
+              -- Struct = 23
+              -- TypeParameter = 26
+              -- Variable = 13   
+              symbols = { 'Method', 'Function', 'Constructor' },
+            })
+          else
+            builtin.treesitter()
+          end
+        end, { desc = '[T]ree [S]ymbols' })
         vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
         vim.keymap.set('n', '<leader>fb', ':Telescope file_browser<CR>', { noremap = true })
         vim.keymap.set('n', '<leader>fc', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { noremap = true })
@@ -275,7 +308,9 @@ local specs = {
         })
         vim.api.nvim_create_autocmd('FileType', {
           callback = function(args)
-            if pcall(vim.treesitter.start, args.buf) then
+            if not pcall(vim.treesitter.start, args.buf) then return end
+            local lang = vim.treesitter.language.get_lang(vim.bo[args.buf].filetype)
+            if lang and vim.treesitter.query.get(lang, 'indents') then
               vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
             end
           end,
